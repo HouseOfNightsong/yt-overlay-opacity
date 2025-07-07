@@ -1,0 +1,43 @@
+# Development files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Build output
+*.xpi
+*.zip
+build/
+dist/
+
+# Node modules (if you add any build tools later)
+node_modules/
+package-lock.json
+
+# Private keys or certificates
+*.pem
+*.key
+
+# Test files
+test/
+tests/
+
+# Personal notes
+notes.txt
+TODO.txt
+
+# Screenshots working directory (keep final ones)
+screenshots/*.psd
+screenshots/*.xcf
