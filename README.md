@@ -4,7 +4,8 @@ A Firefox extension that reduces the opacity of YouTube overlay elements for a l
 
 ## Demo
 
-![Extension Demo](demo/extension-demo.gif)
+![Extension Demo](demo/extension-demo-1.gif)
+![Extension Demo](demo/extension-dem-2.gif)
 *See the extension in action - overlay elements become transparent and restore on hover*
 
 ## Features
