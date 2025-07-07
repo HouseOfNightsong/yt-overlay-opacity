@@ -42,7 +42,7 @@ The extension will be available on the official Firefox Add-ons store.
 
 ### File Structure
 ```
-youtube-overlay-opacity-reducer/
+yt-overlay-opacity/
 ├── manifest.json          # Extension manifest
 ├── content.js            # Content script for YouTube pages
 ├── popup.html            # Popup interface HTML
@@ -57,7 +57,7 @@ youtube-overlay-opacity-reducer/
 ### Building from Source
 1. Clone the repository:
    ```bash
-   git clone https://github.com/HouseOfNightsong/youtube-overlay-opacity-reducer.git
+   git clone https://github.com/HouseOfNightsong/yt-overlay-opacity.git
    ```
 2. Make your changes
 3. Test in Firefox using "Load Temporary Add-on"
@@ -84,7 +84,7 @@ This extension:
 ## Support
 
 If you encounter any issues or have suggestions:
-1. Check the [Issues](https://github.com/HouseOfNightsong/youtube-overlay-opacity-reducer/issues) page
+1. Check the [Issues](https://github.com/HouseOfNightsong/yt-overlay-opacity/issues) page
 2. Create a new issue with:
    - Firefox version
    - Extension version
