@@ -1,0 +1,57 @@
+{
+  "manifest_version": 2,
+  "name": "YouTube Overlay Opacity Reducer",
+  "version": "1.0.0",
+  "description": "Reduces opacity of YouTube overlay elements for less intrusive viewing while maintaining hover functionality",
+  
+  "author": "Adrian Nightsong",
+  "homepage_url": "https://github.com/HouseOfNightsong/yt-overlay-opacity",
+  
+  "permissions": [
+    "activeTab",
+    "storage",
+    "*://www.youtube.com/*",
+    "*://youtube.com/*"
+  ],
+  
+  "content_scripts": [
+    {
+      "matches": [
+        "*://www.youtube.com/*",
+        "*://youtube.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_end"
+    }
+  ],
+  
+  "browser_action": {
+    "default_popup": "popup.html",
+    "default_title": "YouTube Overlay Opacity Reducer - Click to configure",
+    "default_icon": {
+      "16": "icon16.png",
+      "32": "icon32.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  
+  "icons": {
+    "16": "icon16.png",
+    "32": "icon32.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  
+  "web_accessible_resources": [
+    "styles.css"
+  ],
+  
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "youtube-overlay-opacity@adrian-nightsong.extension",
+      "strict_min_version": "57.0"
+    }
+  }
+}

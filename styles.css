@@ -1,0 +1,44 @@
+/* YouTube Overlay Opacity Reducer - Styles */
+
+/* Target the specific YouTube elements you identified */
+.ytp-ce-element-show {
+    transition: opacity 0.3s ease !important;
+}
+
+.ytReelMetapanelViewModelHost {
+    transition: opacity 0.3s ease !important;
+}
+
+.ytd-reel-video-renderer.style-scope.player-controls > .ytd-reel-video-renderer.style-scope {
+    transition: opacity 0.3s ease !important;
+}
+
+/* Elements that have been processed by our extension */
+[data-yt-opacity-reduced="true"] {
+    transition: opacity 0.3s ease !important;
+}
+
+/* Hover effects for processed elements - restore full visibility */
+[data-yt-opacity-reduced="true"]:hover {
+    opacity: 1 !important;
+}
+
+/* Ensure video elements themselves are never affected */
+video {
+    opacity: 1 !important;
+}
+
+/* Ensure iframe elements (embedded videos) are never affected */
+iframe {
+    opacity: 1 !important;
+}
+
+/* Make sure important YouTube controls remain fully visible */
+.ytp-chrome-bottom,
+.ytp-chrome-top,
+.ytp-progress-bar-container,
+.ytp-volume-panel,
+.ytp-time-display,
+.ytp-chrome-controls {
+    opacity: 1 !important;
+}

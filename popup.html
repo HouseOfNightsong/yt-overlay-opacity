@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {
+            width: 320px;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 18px;
+            color: #333;
+            margin: 0;
+        }
+        
+        .header p {
+            font-size: 12px;
+            color: #666;
+            margin: 5px 0 0 0;
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .control-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background: #ccc;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .toggle-switch.active {
+            background: #4CAF50;
+        }
+        
+        .toggle-switch .toggle-slider {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+        
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(30px);
+        }
+        
+        .opacity-container {
+            margin-top: 10px;
+        }
+        
+        .opacity-slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+            margin: 10px 0;
+        }
+        
+        .opacity-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+        }
+        
+        .opacity-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .opacity-value {
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #45a049;
+        }
+        
+        .btn-secondary {
+            background: #f44336;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #da190b;
+        }
+        
+        .status {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #666;
+            min-height: 20px;
+        }
+        
+        .tip {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            color: #0066cc;
+            margin-top: 15px;
+        }
+        
+        .tip strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>YouTube Overlay Opacity</h1>
+        <p>Target specific YouTube overlay elements</p>
+    </div>
+    
+    <div class="control-group">
+        <label>Enable Extension</label>
+        <div class="toggle-container">
+            <span>Extension Status:</span>
+            <div class="toggle-switch active" id="toggleSwitch">
+                <div class="toggle-slider"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="control-group">
+        <label>Opacity Level</label>
+        <div class="opacity-container">
+            <input type="range" id="opacitySlider" class="opacity-slider" min="0.1" max="1" step="0.1" value="0.3">
+            <div class="opacity-value" id="opacityValue">30% (More Transparent)</div>
+        </div>
+    </div>
+    
+    <div class="buttons">
+        <button class="btn btn-primary" id="applyBtn">Apply Now</button>
+        <button class="btn btn-secondary" id="resetBtn">Reset</button>
+    </div>
+    
+    <div class="status" id="status">Loading...</div>
+    
+    <div class="tip">
+        <strong>YouTube Specific:</strong>
+        Targets: .ytp-ce-element-show, .ytReelMetapanelViewModelHost, and player controls. Hover over transparent elements to restore visibility.
+    </div>
+    
+    <script src="popup.js"></script>
+</body>
+</html>
