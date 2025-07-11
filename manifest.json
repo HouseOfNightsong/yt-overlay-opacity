@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "YouTube Overlay Opacity Reducer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Reduces opacity of YouTube overlay elements for less intrusive viewing while maintaining hover functionality",
   
   "author": "Adrian Nightsong",
