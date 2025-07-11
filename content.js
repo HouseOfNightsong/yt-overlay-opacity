@@ -1,4 +1,4 @@
-// YouTube Overlay Opacity Reducer - Content Script (Optimized)
+// YouTube Overlay Opacity Reducer - Content Script (CSS-based approach)
 (function() {
     'use strict';
     
@@ -13,14 +13,12 @@
     // Performance optimization variables
     let checkInterval = null;
     let mutationTimeout = null;
-    let hoverListenerAdded = false;
     const timeouts = new Map();
     
     // Specific YouTube selectors
     const youtubeSelectors = [
         '.ytp-ce-element-show',
-        '.ytReelMetapanelViewModelHost',
-        '.ytd-reel-video-renderer.style-scope.player-controls > .ytd-reel-video-renderer.style-scope'
+        '.ytReelMetapanelViewModelHost'
     ];
     
     // Debug logging function
@@ -28,14 +26,60 @@
         if (DEBUG) console.log('[YT-Opacity]', ...args);
     }
     
-    // Performance measurement wrapper
-    function measurePerformance(name, fn) {
-        if (!DEBUG) return fn();
-        const start = performance.now();
-        const result = fn();
-        const end = performance.now();
-        debugLog(`${name} took ${(end - start).toFixed(2)}ms`);
-        return result;
+    // Create dynamic CSS and inject it
+    function injectStyles() {
+        let styleElement = document.getElementById('yt-opacity-reducer-styles');
+        
+        if (!styleElement) {
+            styleElement = document.createElement('style');
+            styleElement.id = 'yt-opacity-reducer-styles';
+            document.head.appendChild(styleElement);
+        }
+        
+        // Update the CSS with current opacity level
+        styleElement.textContent = `
+            /* Base styles for reduced opacity elements */
+            [data-yt-opacity-reduced="true"] {
+                transition: opacity 0.3s ease !important;
+            }
+            
+            /* Apply opacity only when not hidden by YouTube */
+            [data-yt-opacity-reduced="true"]:not([style*="display: none"]):not([style*="display:none"]):not([style*="visibility: hidden"]):not([style*="visibility:hidden"]):not(.ytp-ce-element-hide):not([aria-hidden="true"]):not(.ytp-autohide) {
+                opacity: ${opacityLevel} !important;
+            }
+            
+            /* Hover state - restore full opacity - HIGHER SPECIFICITY */
+            [data-yt-opacity-reduced="true"]:not([style*="display: none"]):not([style*="display:none"]):not([style*="visibility: hidden"]):not([style*="visibility:hidden"]):not(.ytp-ce-element-hide):not([aria-hidden="true"]):not(.ytp-autohide):hover {
+                opacity: 1 !important;
+            }
+            
+            /* Ensure elements in autohide state stay hidden */
+            .ytp-autohide [data-yt-opacity-reduced="true"],
+            [data-yt-opacity-reduced="true"].ytp-autohide {
+                opacity: 0 !important;
+                pointer-events: none !important;
+            }
+            
+            /* Never touch player controls */
+            .ytp-chrome-bottom,
+            .ytp-chrome-top,
+            .ytp-gradient-bottom,
+            .ytp-gradient-top,
+            .ytp-chrome-controls,
+            .ytp-progress-bar-container {
+                opacity: 1 !important;
+            }
+            
+            /* Respect YouTube's autohide for controls */
+            .ytp-autohide .ytp-chrome-bottom,
+            .ytp-autohide .ytp-chrome-top,
+            .ytp-autohide .ytp-gradient-bottom,
+            .ytp-autohide .ytp-gradient-top {
+                opacity: 0 !important;
+            }
+        `;
+        
+        debugLog('Styles injected/updated with opacity:', opacityLevel);
     }
     
     // Managed timeout system
@@ -67,6 +111,7 @@
                     opacityLevel = result.opacity !== undefined ? result.opacity : 0.3;
                     debugLog('Settings loaded:', {enabled: isEnabled, opacity: opacityLevel});
                     if (isEnabled) {
+                        injectStyles();
                         startMonitoring();
                         applyOpacityToElements();
                     } else {
@@ -81,14 +126,26 @@
                         opacityLevel = result.opacity !== undefined ? result.opacity : 0.3;
                         debugLog('Settings loaded from local:', {enabled: isEnabled, opacity: opacityLevel});
                         if (isEnabled) {
+                            injectStyles();
                             startMonitoring();
                             applyOpacityToElements();
                         }
                     });
                 });
+            } else {
+                if (isEnabled) {
+                    injectStyles();
+                    startMonitoring();
+                    applyOpacityToElements();
+                }
             }
         } catch (error) {
             debugLog('Using default settings, storage not available');
+            if (isEnabled) {
+                injectStyles();
+                startMonitoring();
+                applyOpacityToElements();
+            }
         }
     }
     
@@ -109,118 +166,84 @@
         }
     }
     
-    // Event delegation for hover effects
-    function handleHoverEnter(e) {
-        if (e.target.hasAttribute('data-yt-opacity-reduced') && isEnabled) {
-            requestAnimationFrame(() => {
-                e.target.style.setProperty('opacity', '1', 'important');
-            });
+    // Check if element should be processed
+    function shouldProcessElement(element) {
+        // Skip if element is part of player controls
+        const isPlayerControl = element.closest('.ytp-chrome-bottom, .ytp-chrome-top, .ytp-chrome-controls, .ytp-gradient-bottom, .ytp-gradient-top');
+        if (isPlayerControl) {
+            return false;
         }
-    }
-    
-    function handleHoverLeave(e) {
-        if (e.target.hasAttribute('data-yt-opacity-reduced') && isEnabled) {
-            requestAnimationFrame(() => {
-                e.target.style.setProperty('opacity', opacityLevel, 'important');
-            });
+        
+        // Skip if element has specific hide classes
+        if (element.classList.contains('ytp-ce-element-hide') || 
+            element.classList.contains('ytp-autohide')) {
+            return false;
         }
-    }
-    
-    function addHoverListener() {
-        if (hoverListenerAdded) return;
         
-        document.addEventListener('mouseenter', handleHoverEnter, true);
-        document.addEventListener('mouseleave', handleHoverLeave, true);
-        hoverListenerAdded = true;
-        debugLog('Hover listeners added');
-    }
-    
-    function removeHoverListener() {
-        if (!hoverListenerAdded) return;
+        // Skip if element is hidden
+        const style = window.getComputedStyle(element);
+        if (style.display === 'none' || style.visibility === 'hidden') {
+            return false;
+        }
         
-        document.removeEventListener('mouseenter', handleHoverEnter, true);
-        document.removeEventListener('mouseleave', handleHoverLeave, true);
-        hoverListenerAdded = false;
-        debugLog('Hover listeners removed');
+        return true;
     }
     
     // Apply opacity to specific YouTube elements
     function applyOpacityToElements() {
         if (!isEnabled) return;
         
-        measurePerformance('applyOpacity', () => {
-            let newElementsProcessed = 0;
-            
-            youtubeSelectors.forEach(selector => {
-                try {
-                    const elements = document.querySelectorAll(selector);
+        let newElementsProcessed = 0;
+        
+        youtubeSelectors.forEach(selector => {
+            try {
+                const elements = document.querySelectorAll(selector);
+                
+                elements.forEach(element => {
+                    if (!shouldProcessElement(element)) {
+                        return;
+                    }
                     
-                    elements.forEach(element => {
-                        if (element && !element.hasAttribute('data-yt-opacity-reduced')) {
-                            // Store original opacity before modification
-                            const computedStyle = window.getComputedStyle(element);
-                            const originalOpacity = computedStyle.opacity || '1';
-                            
-                            // Store element data
-                            const elementData = {
-                                originalOpacity: originalOpacity,
-                                originalStyleOpacity: element.style.opacity || ''
-                            };
-                            processedElements.set(element, elementData);
-                            
-                            // Apply reduced opacity with RAF for better performance
-                            requestAnimationFrame(() => {
-                                element.style.setProperty('opacity', opacityLevel, 'important');
-                                element.setAttribute('data-yt-opacity-reduced', 'true');
-                            });
-                            
-                            newElementsProcessed++;
-                        }
-                    });
-                } catch (error) {
-                    debugLog(`Error processing selector ${selector}:`, error);
-                }
-            });
-            
-            // Only log if new elements were processed
-            if (newElementsProcessed > 0) {
-                debugLog(`Processed ${newElementsProcessed} new elements`);
-                // Ensure hover listeners are added
-                addHoverListener();
+                    if (element && !element.hasAttribute('data-yt-opacity-reduced')) {
+                        // Just add the attribute, CSS will handle the rest
+                        element.setAttribute('data-yt-opacity-reduced', 'true');
+                        
+                        // Mark as processed
+                        processedElements.set(element, true);
+                        
+                        newElementsProcessed++;
+                        debugLog('Processed element:', element);
+                    }
+                });
+            } catch (error) {
+                debugLog(`Error processing selector ${selector}:`, error);
             }
         });
+        
+        if (newElementsProcessed > 0) {
+            debugLog(`Processed ${newElementsProcessed} new elements`);
+        }
     }
     
-    // Remove opacity from elements and restore original state
+    // Remove opacity from elements
     function removeOpacityFromElements() {
         debugLog('Removing opacity from YouTube elements...');
         
         const elements = document.querySelectorAll('[data-yt-opacity-reduced="true"]');
         elements.forEach(element => {
-            const elementData = processedElements.get(element);
-            
-            requestAnimationFrame(() => {
-                if (elementData) {
-                    // Restore original opacity
-                    if (elementData.originalStyleOpacity === '') {
-                        element.style.removeProperty('opacity');
-                    } else {
-                        element.style.opacity = elementData.originalStyleOpacity;
-                    }
-                    processedElements.delete(element);
-                } else {
-                    // Fallback if no data stored
-                    element.style.removeProperty('opacity');
-                }
-                
-                // Remove attribute
-                element.removeAttribute('data-yt-opacity-reduced');
-            });
+            element.removeAttribute('data-yt-opacity-reduced');
+            processedElements.delete(element);
         });
         
-        // Remove hover listeners when disabled
-        removeHoverListener();
         debugLog('Opacity removed from all elements');
+    }
+    
+    // Remove injected styles
+    function removeStyles() {
+        const styleElement = document.getElementById('yt-opacity-reducer-styles');
+        if (styleElement) {
+            styleElement.remove();
+        }
     }
     
     // Start monitoring for new elements
@@ -262,20 +285,21 @@
                     isEnabled = request.enabled;
                     saveSettings();
                     if (isEnabled) {
+                        injectStyles();
                         startMonitoring();
                         applyOpacityToElements();
                     } else {
                         stopMonitoring();
                         removeOpacityFromElements();
+                        removeStyles();
                     }
                     sendResponse({success: true, enabled: isEnabled});
                 } else if (request.action === 'setOpacity') {
                     opacityLevel = request.opacity;
                     saveSettings();
                     if (isEnabled) {
-                        // Remove and reapply with new opacity
-                        removeOpacityFromElements();
-                        setManagedTimeout('reapplyOpacity', applyOpacityToElements, 100);
+                        // Update styles with new opacity
+                        injectStyles();
                     }
                     sendResponse({success: true, opacity: opacityLevel});
                 } else if (request.action === 'getStatus') {
@@ -283,7 +307,9 @@
                 } else if (request.action === 'reapply') {
                     if (isEnabled) {
                         removeOpacityFromElements();
-                        setManagedTimeout('reapplyManual', applyOpacityToElements, 100);
+                        setManagedTimeout('reapplyManual', () => {
+                            applyOpacityToElements();
+                        }, 100);
                     }
                     sendResponse({success: true});
                 }
@@ -309,7 +335,6 @@
             
             mutations.forEach(mutation => {
                 if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                    // Quick check if we should reapply
                     for (let node of mutation.addedNodes) {
                         if (node.nodeType === 1) {
                             for (let selector of youtubeSelectors) {
@@ -327,23 +352,23 @@
                         }
                     }
                 }
-                if (shouldReapply) return;
             });
             
             if (shouldReapply) {
                 debugLog('New elements detected, reapplying opacity...');
                 applyOpacityToElements();
             }
-        }, 250); // Throttle to 250ms
+        }, 250);
     });
     
     // Cleanup function
     function cleanup() {
         debugLog('Cleaning up...');
         stopMonitoring();
-        removeHoverListener();
         clearAllTimeouts();
         if (observer) observer.disconnect();
+        removeOpacityFromElements();
+        removeStyles();
     }
     
     // Clean up when page unloads
@@ -366,15 +391,5 @@
             applyOpacityToElements();
         }
     }, 1000);
-    
-    // Debug memory usage (only in debug mode)
-    if (DEBUG && performance.memory) {
-        setInterval(() => {
-            console.log('[YT-Opacity] Memory usage:', {
-                used: Math.round(performance.memory.usedJSHeapSize / 1048576) + 'MB',
-                total: Math.round(performance.memory.totalJSHeapSize / 1048576) + 'MB'
-            });
-        }, 30000); // Every 30 seconds
-    }
     
 })();
