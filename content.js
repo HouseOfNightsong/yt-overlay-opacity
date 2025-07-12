@@ -1,4 +1,4 @@
-// YouTube Overlay Opacity Reducer - Content Script (CSS-based approach)
+// YouTube Overlay Opacity Reducer - Content Script (Optimized Performance Version)
 (function() {
     'use strict';
     
@@ -15,15 +15,35 @@
     let mutationTimeout = null;
     const timeouts = new Map();
     
-    // Specific YouTube selectors
+    // Adaptive interval settings
+    let currentCheckDelay = 1000; // Start at 1 second
+    const MIN_CHECK_DELAY = 1000; // Minimum 1 second
+    const MAX_CHECK_DELAY = 10000; // Maximum 10 seconds
+    let consecutiveEmptyChecks = 0;
+    
+    // Specific YouTube selectors - combined for performance
     const youtubeSelectors = [
         '.ytp-ce-element-show',
-        '.ytReelMetapanelViewModelHost'
+        '.ytReelMetapanelViewModelHost',
+        '.ytd-reel-video-renderer.style-scope.player-controls'
     ];
+    const combinedSelector = youtubeSelectors.join(', ');
     
     // Debug logging function
     function debugLog(...args) {
         if (DEBUG) console.log('[YT-Opacity]', ...args);
+    }
+    
+    // Performance measurement wrapper
+    function measurePerformance(name, fn) {
+        if (!DEBUG) return fn();
+        const start = performance.now();
+        const result = fn();
+        const end = performance.now();
+        if (end - start > 10) { // Only log slow operations
+            debugLog(`${name} took ${(end - start).toFixed(2)}ms`);
+        }
+        return result;
     }
     
     // Create dynamic CSS and inject it
@@ -189,15 +209,16 @@
         return true;
     }
     
-    // Apply opacity to specific YouTube elements
+    // Apply opacity to specific YouTube elements (optimized)
     function applyOpacityToElements() {
-        if (!isEnabled) return;
+        if (!isEnabled) return 0;
         
-        let newElementsProcessed = 0;
-        
-        youtubeSelectors.forEach(selector => {
+        return measurePerformance('applyOpacity', () => {
+            let newElementsProcessed = 0;
+            
             try {
-                const elements = document.querySelectorAll(selector);
+                // Use combined selector for better performance
+                const elements = document.querySelectorAll(combinedSelector);
                 
                 elements.forEach(element => {
                     if (!shouldProcessElement(element)) {
@@ -216,13 +237,24 @@
                     }
                 });
             } catch (error) {
-                debugLog(`Error processing selector ${selector}:`, error);
+                debugLog('Error processing elements:', error);
             }
+            
+            if (newElementsProcessed > 0) {
+                debugLog(`Processed ${newElementsProcessed} new elements`);
+                consecutiveEmptyChecks = 0;
+                currentCheckDelay = MIN_CHECK_DELAY; // Reset to fast checking
+            } else {
+                consecutiveEmptyChecks++;
+                // Gradually increase delay when no new elements found
+                if (consecutiveEmptyChecks > 2) {
+                    currentCheckDelay = Math.min(currentCheckDelay * 1.5, MAX_CHECK_DELAY);
+                    debugLog(`No new elements, increasing check delay to ${currentCheckDelay}ms`);
+                }
+            }
+            
+            return newElementsProcessed;
         });
-        
-        if (newElementsProcessed > 0) {
-            debugLog(`Processed ${newElementsProcessed} new elements`);
-        }
     }
     
     // Remove opacity from elements
@@ -246,26 +278,30 @@
         }
     }
     
-    // Start monitoring for new elements
+    // Start monitoring with adaptive interval
     function startMonitoring() {
-        // Start interval check
-        if (!checkInterval) {
-            checkInterval = setInterval(() => {
+        stopMonitoring(); // Clear any existing interval
+        
+        function scheduleNextCheck() {
+            checkInterval = setTimeout(() => {
                 if (isEnabled) {
                     applyOpacityToElements();
+                    scheduleNextCheck(); // Schedule next check
                 }
-            }, 3000);
-            debugLog('Interval monitoring started');
+            }, currentCheckDelay);
         }
+        
+        scheduleNextCheck();
+        debugLog('Adaptive monitoring started');
     }
     
     // Stop monitoring
     function stopMonitoring() {
         // Clear interval
         if (checkInterval) {
-            clearInterval(checkInterval);
+            clearTimeout(checkInterval);
             checkInterval = null;
-            debugLog('Interval monitoring stopped');
+            debugLog('Monitoring stopped');
         }
         
         // Clear any pending mutation timeouts
@@ -307,6 +343,7 @@
                 } else if (request.action === 'reapply') {
                     if (isEnabled) {
                         removeOpacityFromElements();
+                        currentCheckDelay = MIN_CHECK_DELAY; // Reset to fast checking
                         setManagedTimeout('reapplyManual', () => {
                             applyOpacityToElements();
                         }, 100);
@@ -320,46 +357,62 @@
         debugLog('Extension messaging not available:', error);
     }
     
-    // Throttled mutation observer
-    const observer = new MutationObserver(function(mutations) {
-        if (!isEnabled) return;
+    // Optimized mutation observer - target YouTube app container
+    let observer = null;
+    
+    function initObserver() {
+        // Try to find YouTube app container for more targeted observation
+        const targetNode = document.querySelector('ytd-app') || document.body;
         
-        // Clear existing timeout
-        if (mutationTimeout) {
-            clearTimeout(mutationTimeout);
-        }
-        
-        // Throttle the reapplication
-        mutationTimeout = setTimeout(() => {
-            let shouldReapply = false;
+        observer = new MutationObserver(function(mutations) {
+            if (!isEnabled) return;
             
-            mutations.forEach(mutation => {
-                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                    for (let node of mutation.addedNodes) {
-                        if (node.nodeType === 1) {
-                            for (let selector of youtubeSelectors) {
-                                try {
-                                    if ((node.matches && node.matches(selector)) || 
-                                        (node.querySelector && node.querySelector(selector))) {
-                                        shouldReapply = true;
-                                        break;
-                                    }
-                                } catch (e) {
-                                    // Ignore selector errors
+            // Clear existing timeout
+            if (mutationTimeout) {
+                clearTimeout(mutationTimeout);
+            }
+            
+            // Throttle the reapplication
+            mutationTimeout = setTimeout(() => {
+                let shouldReapply = false;
+                
+                // Quick check if relevant elements were added
+                for (let mutation of mutations) {
+                    if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                        for (let node of mutation.addedNodes) {
+                            if (node.nodeType === 1) {
+                                // Check if node matches our selectors
+                                if (node.matches && node.matches(combinedSelector)) {
+                                    shouldReapply = true;
+                                    break;
+                                }
+                                // Check if node contains our selectors
+                                if (node.querySelector && node.querySelector(combinedSelector)) {
+                                    shouldReapply = true;
+                                    break;
                                 }
                             }
-                            if (shouldReapply) break;
                         }
+                        if (shouldReapply) break;
                     }
                 }
-            });
-            
-            if (shouldReapply) {
-                debugLog('New elements detected, reapplying opacity...');
-                applyOpacityToElements();
-            }
-        }, 250);
-    });
+                
+                if (shouldReapply) {
+                    debugLog('New elements detected via mutation observer');
+                    currentCheckDelay = MIN_CHECK_DELAY; // Reset to fast checking
+                    applyOpacityToElements();
+                }
+            }, 250);
+        });
+        
+        // Start observing
+        observer.observe(targetNode, {
+            childList: true,
+            subtree: true
+        });
+        
+        debugLog('Mutation observer initialized on:', targetNode.tagName || 'document.body');
+    }
     
     // Cleanup function
     function cleanup() {
@@ -376,14 +429,16 @@
     window.addEventListener('pagehide', cleanup);
     
     // Initialize
-    debugLog('YouTube Overlay Opacity Reducer initialized');
+    debugLog('YouTube Overlay Opacity Reducer initialized (Optimized Version)');
     loadSettings();
     
-    // Start observing
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
+    // Wait for YouTube app to be ready before starting observer
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initObserver);
+    } else {
+        // Small delay to ensure YouTube app is loaded
+        setTimeout(initObserver, 500);
+    }
     
     // Apply immediately after a short delay
     setManagedTimeout('initialApply', () => {
@@ -391,5 +446,16 @@
             applyOpacityToElements();
         }
     }, 1000);
+    
+    // Performance monitoring in debug mode
+    if (DEBUG && window.performance && window.performance.memory) {
+        setInterval(() => {
+            console.log('[YT-Opacity] Performance stats:', {
+                memoryUsed: Math.round(performance.memory.usedJSHeapSize / 1048576) + 'MB',
+                checkDelay: currentCheckDelay + 'ms',
+                processedElements: document.querySelectorAll('[data-yt-opacity-reduced="true"]').length
+            });
+        }, 30000); // Every 30 seconds
+    }
     
 })();
